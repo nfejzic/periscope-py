@@ -1,7 +1,8 @@
 import json
 from typing import Optional
 import jsonpickle
-from numpy import broadcast_to
+from os import listdir
+from os.path import isfile
 
 
 class HyperfineResult:
@@ -215,8 +216,8 @@ def to_bench_result(name: str, pre: dict) -> BenchResult:
         raise Exception("Invalid JSON format for bench result")
 
 
-def results_from_file(file: str) -> list[BenchResult]:
-    with open(file, encoding="utf-8") as f:
+def results_from_file(path: str) -> list[BenchResult]:
+    with open(path, encoding="utf-8") as f:
         results_file = json.load(f)
 
     test = jsonpickle.decode(

@@ -9,25 +9,43 @@ Quoting from the matplotlib documentation:
 """
 
 import argparse
+from logging import error
+
+from os import listdir
+from os.path import isfile, join
 
 import matplotlib.pyplot as plt
 
 import whiskers
+import cmp_bars
 import histogram
 import periscope_result
 
 
-def main(
-    periscope_results: list[periscope_result.BenchResult], args: argparse.Namespace
-):
+def main(args: argparse.Namespace):
     figure = plt.figure(figsize=(20, 12), constrained_layout=True)
 
     match args.type:
         case "whisker":
+            periscope_results = periscope_result.results_from_file(args.path)
             whiskers.plot_whiskers(args, periscope_results, figure)
+        case "cmp-bars":
+            if isfile(args.path):
+                error(f"'{args.path}' is not a directory.")
+
+            files_with_results = {}
+            for file in listdir(args.path):
+                periscope_file = periscope_result.results_from_file(
+                    join(args.path, file)
+                )
+                files_with_results[file] = periscope_file
+
+            cmp_bars.plot_cmp_bars(args, files_with_results, figure)
         case "histogram":
+            periscope_results = periscope_result.results_from_file(args.path)
             histogram.plot_histogram(args, periscope_results, figure, of_dump=False)
         case "histogram-after-dump":
+            periscope_results = periscope_result.results_from_file(args.path)
             histogram.plot_histogram(args, periscope_results, figure, of_dump=True)
         case _:
             print("Unknown type passed.")
@@ -41,15 +59,20 @@ def main(
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("file", help="JSON file with benchmark results")
+    parser.add_argument(
+        "path", help="JSON file or path with json files with benchmark results"
+    )
     parser.add_argument("--title", help="Plot Title")
     parser.add_argument("--sort-by", choices=["median", "wc"], help="Sort method")
+    parser.add_argument(
+        "--scale", choices=["linear", "log"], help="Scaling of the plog"
+    )
     parser.add_argument(
         "--labels", help="Comma-separated list of entries for the plot legend"
     )
     parser.add_argument(
         "--type",
-        choices=["whisker", "histogram", "histogram-after-dump"],
+        choices=["whisker", "cmp-bars", "histogram", "histogram-after-dump"],
         help="Creates a histogram with word count of \
         (dump of ) the model on y axis and the time on x axis \
         for each file.",
@@ -61,5 +84,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    periscope_results = periscope_result.results_from_file(args.file)
-    main(periscope_results, args)
+    main(args)
